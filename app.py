@@ -1,10 +1,11 @@
+from logging import PlaceHolder
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
 from num2words import num2words
 from datetime import datetime
 
-st.set_page_config(page_title="Admin - Githa Persada Tehnik", layout="wide")
+st.set_page_config(page_title="Pembuatan Faktur Githa Persada Tehnik", layout="wide")
 
 def draw_header(pdf):
     pdf.set_font('Times', 'B', 20)
@@ -22,9 +23,9 @@ def draw_header(pdf):
     x_start = pdf.get_x()
     y_start = pdf.get_y()
     pdf.set_line_width(0.5)
-    pdf.line(x_start, y_start, 200, y_start) # Garis tebal
+    pdf.line(x_start, y_start, 200, y_start) 
     pdf.set_line_width(0.2)
-    pdf.line(x_start, y_start + 1, 200, y_start + 1) # Garis tipis
+    pdf.line(x_start, y_start + 1, 200, y_start + 1) 
     pdf.ln(8)
 
 def create_invoice_pdf(invoice_no, date, customer_name, customer_addr, items, grand_total):
@@ -75,7 +76,7 @@ def create_invoice_pdf(invoice_no, date, customer_name, customer_addr, items, gr
         x_start = pdf.get_x()
         y_start = pdf.get_y()
 
-        pdf.set_xy(x_start + 30, y_start) # Pindah ke posisi kolom nama
+        pdf.set_xy(x_start + 30, y_start)
         pdf.multi_cell(85, 8, nama, border='LTR', align='L')
         
         y_end = pdf.get_y()
@@ -150,7 +151,12 @@ def create_offer_pdf(date, customer_name, opening_context, items, signer_name):
     no = 1
     for _, row in items.iterrows():
         nama = str(row['Nama Barang'])
-        harga = str(row['Harga / Satuan']) 
+        
+        raw_harga = row['Harga / Satuan']
+        try:
+            harga = f"Rp. {float(raw_harga):,.0f}"
+        except:
+            harga = str(raw_harga)
         
         x_start = pdf.get_x()
         y_start = pdf.get_y()
@@ -195,21 +201,19 @@ def create_offer_pdf(date, customer_name, opening_context, items, signer_name):
 st.sidebar.title("Navigasi")
 menu = st.sidebar.radio("Pilih Menu:", ["📝 Buat Faktur", "📩 Buat Surat Penawaran"])
 
-st.title("Admin - Githa Persada Tehnik")
+st.title("Pembuatan Surat Penawaran Githa Persada Tehnik")
 st.markdown("---")
 
 if menu == "📝 Buat Faktur":
     st.header("Buat Faktur Penjualan")
     
     if 'data_faktur' not in st.session_state:
-        st.session_state['data_faktur'] = pd.DataFrame([
-            {"Banyaknya": 50, "Nama Barang": "Seal Panel BC Laska KU 330", "Harga Satuan": 225000},
-        ])
+            st.session_state['data_faktur'] = pd.DataFrame(columns=["Banyaknya", "Nama Barang", "Harga Satuan"])
 
     with st.sidebar:
         st.markdown("---")
         st.subheader("Info Faktur")
-        no_faktur = st.text_input("No. Faktur", value="295/GPT/XII/25")
+        no_faktur = st.text_input("No. Faktur", placeholder="Contoh: 295/GPT/XII/25")
         tgl_faktur = st.date_input("Tanggal Faktur", datetime.now())
         cust_name = st.text_input("Nama Customer (PT)")
         cust_addr = st.text_area("Alamat Customer")
@@ -237,24 +241,28 @@ elif menu == "📩 Buat Surat Penawaran":
     st.header("Buat Surat Penawaran Harga")
     
     if 'data_offer' not in st.session_state:
-        st.session_state['data_offer'] = pd.DataFrame([
-            {"Nama Barang": "Rubber seal gasket", "Harga / Satuan": "Rp. 47.500 / pc"},
-        ])
+            st.session_state['data_offer'] = pd.DataFrame(columns=["Nama Barang", "Harga / Satuan"])
 
     col_input1, col_input2 = st.columns(2)
     with col_input1:
         offer_cust = st.text_input("Kepada Yth (Nama PT)", placeholder="Contoh: PT. Indorama")
-        offer_context = st.text_input("Mengenai (Context)", value="suku cadang mesin", placeholder="Contoh: pengadaan sparepart")
+        offer_context = st.text_input("Mengenai (Context)", placeholder="Contoh: Suku cadang mesin")
     with col_input2:
         offer_date = st.date_input("Tanggal Surat", datetime.now())
-        signer_name = st.text_input("Penandatangan", value="Dadan S.")
+        signer_name = st.text_input("Penandatangan", placeholder="Contoh:Dadan S.")
 
     st.subheader("Item Penawaran")
     
     col_config_offer = {
-        "Nama Barang": st.column_config.TextColumn("Nama Barang", width="large", required=True),
-        "Harga / Satuan": st.column_config.TextColumn("Harga (Teks Bebas)", width="medium", required=True),
-    }
+            "Nama Barang": st.column_config.TextColumn("Nama Barang", width="large", required=True),
+            "Harga / Satuan": st.column_config.NumberColumn(
+                "Harga (Rp)", 
+                width="medium", 
+                required=True,
+                format="Rp %d", 
+                min_value=0
+            ),
+        }
     
     df_offer = st.data_editor(st.session_state['data_offer'], column_config=col_config_offer, num_rows="dynamic", use_container_width=True, hide_index=True)
 
